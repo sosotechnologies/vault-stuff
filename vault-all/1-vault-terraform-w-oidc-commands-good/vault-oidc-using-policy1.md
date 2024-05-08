@@ -1,6 +1,6 @@
 ## Login to the vault server and enable the OIDC auth method
 ```sh
-VAULT_LOGIN=hvs.WKn1ixx9lT6oCmdsPUVm5Srt
+VAULT_LOGIN=hvs.
 vault login $VAULT_LOGIN
 export VAULT_ADDR=https://vault.sosotechnologies.com
 vault auth enable oidc
@@ -9,7 +9,7 @@ vault auth enable oidc
 ## Apply the following variables
 ```sh
 export OIDC_CLIENT_ID=vault
-export OIDC_CLIENT_SECRET=NsqbLSxa85Q81OaPPCOYydweaMwDX4Am
+export OIDC_CLIENT_SECRET=NsqbLSxa85Q
 export ALLOWED_REDIRECT_URI_1=https://vault.sosotechnologies.com/ui/vault/auth/oidc/oidc/callback
 export ALLOWED_REDIRECT_URI_2=https://vault.sosotechnologies.com/oidc/callback
 export OIDC_DISCOVERY_URL=https://keycloakdev.sosotechnologies.com/auth/realms/sosotechdev
