@@ -1,0 +1,2 @@
+variable  "address" {}
+variable  "token" {}
