@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: hello
+  annotations:
+    workflows.argoproj.io/description: |
+      This is a simple example from sosotech
+spec:
+  serviceAccountName: argo
+  entrypoint: main
+  volumes:
+  - name: script-volume
+    configMap:
+      name: install-script
+  templates:
+  - name: main
+    script:
+      image: ubuntu:20.04
+      command: [bash]
+      source: |
+        set -eo pipefail
+
+        # Copy the script to a writable location
+        cp /mnt/scripts/install.sh /tmp/install.sh
+        chmod +x /tmp/install.sh
+
+        # Run the script from the writable location
+        echo "Running the install script..."
+        /tmp/install.sh
+
+      volumeMounts:
+      - name: script-volume
+        mountPath: /mnt/scripts
+      resources:
+        requests:
+          ephemeral-storage: "2Gi"
+        limits:
+          ephemeral-storage: "4Gi"

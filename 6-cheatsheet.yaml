@@ -1,0 +1,75 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: hello-wes
+  annotations:
+    workflows.argoproj.io/description: |
+      This is a simple example from sosotech
+spec:
+  serviceAccountName: argo
+  entrypoint: main
+  arguments:
+    parameters:
+      - name: sosobucketed1
+        value: "sosos3-bucket-1"  # Replace with the name of your first S3 bucket
+      - name: sosobucketed2
+        value: "sosos3-bucket-2"  # Replace with the name of your second S3 bucket
+      - name: region
+        value: "us-east-1"  # Replace with your AWS region
+      - name: workingLocation
+        value: "/working"
+      - name: logLocation
+        value: "logs"
+      - name: seconderName
+        value: "unique-seconder"  # Replace with a unique identifier for your workflow
+      - name: configFile
+        value: "config.json"  # Replace with the name of your configuration file
+  templates:
+  - name: main
+    inputs:
+      parameters:
+        - name: sosobucketed1
+        - name: sosobucketed2
+        - name: region
+        - name: workingLocation
+        - name: logLocation
+        - name: seconderName
+        - name: configFile
+    script:
+      image: ubuntu:20.04
+      command: [bash]
+      source: |
+        set -eo pipefail
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update && apt-get install -y awscli jq
+        mkdir -p {{inputs.parameters.workingLocation}}/{{inputs.parameters.seconderName}}/{{inputs.parameters.logLocation}}
+        exec > >(tee -a {{inputs.parameters.workingLocation}}/{{inputs.parameters.seconderName}}/{{inputs.parameters.logLocation}}/{{workflow.name}}_setup_for_all_zones.log) 2>&1
+        
+        start_time=$(date -u +%s)
+        echo "Syncing Pipeline config for zone folder" 
+        aws s3 cp --region {{inputs.parameters.region}} --no-progress s3://{{inputs.parameters.sosobucketed1}}/{{inputs.parameters.configFile}} {{inputs.parameters.workingLocation}}/temp/{{inputs.parameters.configFile}}
+        
+        zone_folder=$(jq -r '.sliceExifOverrides.out' {{inputs.parameters.workingLocation}}/temp/{{inputs.parameters.configFile}})
+        # sync all tiles for processing
+        echo "{{workflow.name}} syncing S3 Pipeline Zones to S3 Working for {{inputs.parameters.seconderName}}:"
+        aws s3 sync --region {{inputs.parameters.region}} --no-progress s3://{{inputs.parameters.sosobucketed1}}/$zone_folder s3://{{inputs.parameters.sosobucketed2}}/{{inputs.parameters.seconderName}}/$zone_folder
+        end_time=$(date -u +%s)
+        duration=$((end_time - start_time))
+        formatted_duration=$(printf "%d:%02d:%02d" "$((duration / 3600))" "$(((duration % 3600) / 60))" "$((duration % 60))")
+        echo setup-for-all-zones,, $(date +"%Y-%m-%d %H:%M:%S" -ud "@$start_time"), $(date +"%Y-%m-%d %H:%M:%S" -ud "@$end_time"), $formatted_duration >> {{inputs.parameters.workingLocation}}/{{inputs.parameters.seconderName}}/{{inputs.parameters.logLocation}}/{{workflow.name}}_times.csv
+      resources:
+        requests:
+          ephemeral-storage: "2Gi"
+        limits:
+          ephemeral-storage: "4Gi"
+      env:
+      - name: AWS_ACCESS_KEY_ID
+        valueFrom:
+          secretKeyRef:
+            name: aws-credentials
+            key: aws_access_key_id
+      - name: AWS_SECRET_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: aws-credentials
+            key: aws_secret_access_key

@@ -1,0 +1,77 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: hello-wes
+  annotations:
+    workflows.argoproj.io/description: |
+      This is a simple example from sosotech
+spec:
+  serviceAccountName: argo
+  entrypoint: main
+  arguments:
+    parameters:
+      - name: sosobucketed1
+        value: "sosos3-bucket-1"
+      - name: sosobucketed2
+        value: "sosos3-bucket-2"
+      - name: region
+        value: "us-east-1"
+      - name: workingLocation
+        value: "/working"
+      - name: logLocation
+        value: "logs"
+      - name: seconderName
+        value: "unique-seconder"
+      - name: configFile
+        value: "config.json"
+  templates:
+  - name: main
+    inputs:
+      parameters:
+        - name: sosobucketed1
+        - name: sosobucketed2
+        - name: region
+        - name: workingLocation
+        - name: logLocation
+        - name: seconderName
+        - name: configFile
+    script:
+      image: ubuntu:20.04
+      command: [bash]
+      args:
+        - "-c"
+        - |
+          set -eo pipefail
+
+          # Copy the script and env file to a writable location
+          cp /mnt/scripts/script.sh /tmp/script.sh
+          cp /mnt/scripts/env.sh /tmp/env.sh
+          chmod +x /tmp/script.sh /tmp/env.sh
+
+          source /tmp/env.sh
+
+          echo "Running the install script..."
+          /tmp/script.sh
+      volumeMounts:
+      - name: script-volume
+        mountPath: /mnt/scripts
+      resources:
+        requests:
+          ephemeral-storage: "2Gi"
+        limits:
+          ephemeral-storage: "4Gi"
+      env:
+      - name: AWS_ACCESS_KEY_ID
+        valueFrom:
+          secretKeyRef:
+            name: aws-credentials
+            key: aws_access_key_id
+      - name: AWS_SECRET_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: aws-credentials
+            key: aws_secret_access_key
+  volumes:
+  - name: script-volume
+    configMap:
+      name: workflow-script-configmap

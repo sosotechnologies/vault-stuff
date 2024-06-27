@@ -1,0 +1,60 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: dag-example
+  annotations:
+    workflows.argoproj.io/description: |
+      This is DAG example from sosotech
+spec:
+  entrypoint: main
+  templates:
+  - name: main
+    dag:
+      tasks:
+      - name: task-a
+        template: task-a
+
+      - name: task-b
+        dependencies: [task-a]
+        template: task-b
+
+      - name: task-c
+        dependencies: [task-a, task-b]  # I declared taskaa to be dependent on task-a and task-b
+        template: task-c
+
+      - name: task-e
+        template: task-e
+
+      - name: task-d
+        dependencies: [task-e]     # I declared task-d to be dependent on task-e
+        template: task-d
+
+  - name: task-a
+    container:
+      image: alpine
+      command: ["sh", "-c"]
+      args: ["echo Task A; sleep 5"]
+
+  - name: task-b
+    container:
+      image: alpine
+      command: ["sh", "-c"]
+      args: ["echo Task B; sleep 5"]
+
+  - name: task-c
+    container:
+      image: alpine
+      command: ["sh", "-c"]
+      args: ["echo Task C; sleep 5"]
+
+  - name: task-e
+    container:
+      image: alpine
+      command: ["sh", "-c"]
+      args: ["echo Task E; sleep 5"]
+
+  - name: task-d
+    container:
+      image: alpine
+      command: ["sh", "-c"]
+      args: ["echo Task D; sleep 5"]
